@@ -1,6 +1,7 @@
 var express = require("express");
 var app = express();
 var bodyParser = require('body-parser');
+var mongoClient = require("mongodb").MongoClient;
 
 app.set("port", 8000);
 
@@ -11,48 +12,33 @@ app.listen(app.get("port"), function () {
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-app.get("/login", function (req, res) {
-  var email = req.query.email;
-  var password = req.query.password;
-
-  if (email == "eve.holt@reqres.in" && password == "cityslicka") {
-    res.send("login successful");
-  } else {
-    res.send("login failed");
-  }
-});
-
-app.get("/checkpwd", function (req, res) {
-  //at least 1 capital letter
-  //at least 1 small letter
-  //at least 8 characters
-
-  if (pwd.length >= 8) {
-    res.send("has 8 characters");
-  } else {
-    res.send("less than 8 characters");
-  }
-
-  var pwd = req.query.password;//Nextstacks12
-  var capital = false;
-  var i = 0;
-  while (i < pwd.length) {
-    var letter = pwd.substring(i, i + 1);
-    if (letter == letter.toUpperCase()) {
-      console.log("letter is capital");
-    } else {
-      console.log("letter is not capital");
+mongoClient.connect("mongodb://localhost:27017/learn", function (err, database) {
+  
+  app.post("/adduser", function (req, res) {
+    var newuser = {
+      name: req.body.name,
+      email: req.body.email
     }
-    i++;
-  }
+
+    database.db().collection("user").insertOne(newuser, function (err, doc) {
+      console.log(doc);
+      res.json({ status: true, result: doc.insertedId });
+    })
+  });
+
 });
 
 
-app.post("/checkeven", function (req, res) {
-  if (req.body.num % 2 == 0) {
-    res.json({ status: true, message: "number is even" });
+app.post("/largestnum", function (req, res) {
+  var num1 = req.body.num1;
+  var num2 = req.body.num2;
+  var num3 = req.body.num3;
+
+  if (num1 > num2 && num1 > num3) {
+    res.json({ status: true, message: "num 1 is greater" });
+  } else if (num2 > num1 && num2 > num3) {
+    res.json({ status: true, message: "num 2 is greater" });
   } else {
-    res.json({ status: true, message: "number is odd" });
+    res.json({ status: true, message: "num 3 is greater" });
   }
 })
-
