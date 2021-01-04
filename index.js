@@ -2,6 +2,7 @@ var express = require("express");
 var app = express();
 var bodyParser = require('body-parser');
 var mongoClient = require("mongodb").MongoClient;
+var ObjectID = require("mongodb").ObjectID;
 const { json } = require("body-parser");
 var cors = require('cors');
 
@@ -21,7 +22,8 @@ mongoClient.connect("mongodb://localhost:27017/learn", function (err, database) 
   app.post("/adduser", function (req, res) {
     var newuser = {
       name: req.body.name,
-      email: req.body.email
+      email: req.body.email,
+      unique_id: new ObjectID()
     }
 
     database.db().collection("user").insertOne(newuser, function (err, doc) {
@@ -37,7 +39,7 @@ mongoClient.connect("mongodb://localhost:27017/learn", function (err, database) 
   app.post("/get_users", function (req, res) {
     var users = [];
     var cursor = database.db().collection("user").find()
-    .skip(parseInt(req.body.skip)).limit(parseInt(req.body.limit));
+      .skip(parseInt(req.body.skip)).limit(parseInt(req.body.limit));
 
     cursor.forEach(function (doc, err) {
       if (err) {
@@ -54,11 +56,53 @@ mongoClient.connect("mongodb://localhost:27017/learn", function (err, database) 
 
 
   app.post("/get_single_user", function (req, res) {
-    database.db().collection("user").findOne({}, function (err, doc) {
+    database.db().collection("user").findOne({ _id: new ObjectID(req.body.id) }, function (err, doc) {
       if (err) {
         res.json({ status: false, message: "error" });
       } else {
         res.json({ status: true, result: doc });
+      }
+    })
+  });
+
+  app.post("/delete_user", function (req, res) {
+    if (
+      req.body.hasOwnProperty("id") &&
+      req.body.hasOwnProperty("name")
+    ) {
+      database.db().collection("user").deleteOne({ _id: new ObjectID(req.body.id) }, function (err, obj) {
+        if (err) {
+          res.json({ status: false, message: "error occured" });
+        } else {
+          res.json({ status: true, message: "user deleted" });
+        }
+      })
+    } else {
+      if (req.body.hasOwnProperty("id") == null) {
+        res.json({ status: false, message: "id parameter is missing" });
+      } else if (!req.body.hasOwnProperty("name")) {
+        res.json({ status: false, message: "name parameter is missing" });
+      }
+    }
+  });
+
+  app.post("/update_user", function (req, res) {
+    database.db().collection("user").updateOne({ _id: new ObjectID(req.body.id) }, {
+      $set: {
+        name: req.body.name,
+        email: req.body.email
+      },
+      $inc: {
+        age: 1
+      },
+      $push: {
+        skills: req.body.course
+      }
+    }, { upsert: false }, function (err, result) {
+      if (err) {
+        res.json({ status: false, message: "error occured" });
+      } else {
+        res.json({ status: true, message: "user updated" });
       }
     })
   })
