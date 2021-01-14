@@ -50,8 +50,6 @@ mongoClient.connect("mongodb://localhost:27017/learn", function (err, database) 
     }, function () {
       res.json({ status: true, result: users });
     });
-
-    // res.json({ status: true, result: users });
   });
 
 
@@ -64,6 +62,40 @@ mongoClient.connect("mongodb://localhost:27017/learn", function (err, database) 
       }
     })
   });
+
+  app.post("/get_user_details", function (req, res) {
+    var data = [];
+    var cursor = database.db().collection("user").aggregate([
+      {
+        $match: { _id: new ObjectID(req.body.id) }
+      }, {
+        $lookup: {
+          from: "scorecategory",
+          localField: "score",
+          foreignField: "max",
+          as: "score_details"
+        },
+      },
+      {
+        $unwind: "$score_details"
+      }
+    ])
+
+    cursor.forEach(function (doc, err) {
+      if (err) {
+        res.json({ status: false, message: "error" });
+      } else {
+        // res.json({ status: true, result: doc });
+        data.push(doc);
+      }
+    },function(){
+      if(data.length > 0 ){
+        res.json({status: true, result: data});
+      }else{
+        res.json({ status: false, message: "no data" });
+      }
+    });
+  })
 
   app.post("/delete_user", function (req, res) {
     if (
